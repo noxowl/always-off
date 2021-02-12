@@ -22,6 +22,7 @@ const keywordPattern = [
 
 const queryParam = "q"
 const excludeOperator = "-site:"
+const includeOperator = "site:"
 const splitSeparator = " "
 
 function alwaysOffToggleListener() {
@@ -48,20 +49,38 @@ function stopListening() {
 
 function alwaysOffListener(requestDetails) {
     let url = new URL(requestDetails.url);
-    let extractedQueries = extractQuery(url);
-    if (!isAlreadyModified(extractedQueries)) {
-        return {
-            redirectUrl: modifyUrl(url, alwaysOff(extractedQueries))
-        };
+    let extractedRawQuery = extractQuery(url);
+    let extractedQueries = extractedRawQuery.split(splitSeparator);
+    if (!isAlreadyModified(extractedRawQuery)) {
+        if (!isMoreResultFrom(extractedQueries)) {
+            return {
+                redirectUrl: modifyUrl(url, alwaysOff(extractedQueries))
+            };
+        }
+    } else {
+        if (isMoreResultFrom(extractedQueries)) {
+            return {
+                redirectUrl: modifyUrl(url, undoAlwaysOff(extractedQueries))
+            };
+        }
     }
 }
 
-function alwaysOff(queryString) {
-    let tempQuery = queryString.split(splitSeparator);
+function alwaysOff(queryArray) {
     for (let keyword of keywordPattern) {
-        tempQuery.push(excludeOperator + keyword)
+        queryArray.push(excludeOperator + keyword)
     }
-    return tempQuery.join(splitSeparator);
+    return queryArray.join(splitSeparator)
+}
+
+function undoAlwaysOff(queryArray){
+    let tempQuery = []
+    for (let query of queryArray) {
+        if (!query.startsWith(excludeOperator)) {
+            tempQuery.push(query)
+        }
+    }
+    return tempQuery.join(splitSeparator)
 }
 
 function extractQuery(originUrl) {
@@ -76,6 +95,15 @@ function modifyUrl(originUri, modifiedQuery) {
 function isAlreadyModified(queries) {
     for (let keyword of keywordPattern) {
         if (queries.includes(excludeOperator + keyword)) {
+            return true
+        }
+    }
+    return false
+}
+
+function isMoreResultFrom(queryArray) {
+    for (let query of queryArray) {
+        if (query.startsWith(includeOperator)) {
             return true
         }
     }
