@@ -1,7 +1,7 @@
 /**
  * AlwaysOff. Remove spam site from Google search query.
  * @author Mirai Kim(Suyeong Rhie) <me@euc-kr.net>
- * @version 0.2
+ * @version 0.3
  * @license MIT
  */
 
