@@ -14,12 +14,26 @@ const urlPattern = [
     "http://*.google.co.kr/search?*",
 ]
 
+const mapsUrlPattern = [
+    "https://maps.google.com/*",
+    "http://maps.google.com/*",
+    "https://*.google.com/maps/search/*",
+    "http://*.google.com/maps/search/*"
+]
+
+const tbmPattern = new Set([
+    null,
+    "isch",
+    "vid"
+])
+
 const keywordPattern = [
     "namu.wiki",
     "namu.news",
     "arca.live"
 ]
 
+const tbmParam = "tbm"
 const queryParam = "q"
 const excludeOperator = "-site:"
 const includeOperator = "site:"
@@ -39,11 +53,17 @@ function startListening() {
         {urls: urlPattern},
         ["blocking"]
     );
+    browser.webRequest.onBeforeRequest.addListener(
+        alwaysOffMapsListener,
+        {urls: mapsUrlPattern},
+        ["blocking"]
+    )
     browser.browserAction.setIcon({path: iconName + "-on.png"});
 }
 
 function stopListening() {
     browser.webRequest.onBeforeRequest.removeListener(alwaysOffListener);
+    browser.webRequest.onBeforeRequest.removeListener(alwaysOffMapsListener);
     browser.browserAction.setIcon({path: iconName + "-off.png"});
 }
 
@@ -51,18 +71,37 @@ function alwaysOffListener(requestDetails) {
     let url = new URL(requestDetails.url);
     let extractedRawQuery = extractQuery(url);
     let extractedQueries = extractedRawQuery.split(splitSeparator);
-    if (!isAlreadyModified(extractedRawQuery)) {
-        if (!isMoreResultFrom(extractedQueries)) {
-            return {
-                redirectUrl: modifyUrl(url, alwaysOff(extractedQueries))
-            };
+    if (isOrdinarySearch(url)) {
+        if (!isAlreadyModified(extractedRawQuery)) {
+            if (!isMoreResultFrom(extractedQueries)) {
+                return {
+                    redirectUrl: modifyUrl(url, alwaysOff(extractedQueries))
+                };
+            }
+        } else {
+            if (isMoreResultFrom(extractedQueries)) {
+                return {
+                    redirectUrl: modifyUrl(url, undoAlwaysOff(extractedQueries))
+                };
+            }
         }
     } else {
-        if (isMoreResultFrom(extractedQueries)) {
+        if (isAlreadyModified(extractedRawQuery)) {
             return {
                 redirectUrl: modifyUrl(url, undoAlwaysOff(extractedQueries))
             };
         }
+    }
+}
+
+function alwaysOffMapsListener(requestDetails) {
+    let url = new URL(requestDetails.url);
+    let extractedRawQuery = extractQuery(url);
+    if (isAlreadyModified(extractedRawQuery)) {
+        let extractedQueries = extractedRawQuery.split(splitSeparator);
+        return {
+            redirectUrl: modifyUrl(url, undoAlwaysOff(extractedQueries))
+        };
     }
 }
 
@@ -81,6 +120,11 @@ function undoAlwaysOff(queryArray){
         }
     }
     return tempQuery.join(splitSeparator)
+}
+
+function isOrdinarySearch(originUrl) {
+    let tbm = originUrl.searchParams.get(tbmParam)
+    return tbmPattern.has(tbm)
 }
 
 function extractQuery(originUrl) {
