@@ -1,5 +1,5 @@
 # AlwaysOff
-https://addons.mozilla.org/ko/firefox/addon/alwaysoff/
+https://addons.mozilla.org/ko/firefox/addon/always-off/
 
 항상 나무위키를 끌 수 있도록 도와주는 Firefox Extension 입니다.
 
